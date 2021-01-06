@@ -1,11 +1,25 @@
 const puppeteer = require('puppeteer');
 const config = require('./config');
-const variables = require('./variables');
-const {sendBtn, profileDiv} = require('./variables');
+const {sendImage} = require('./settings');
+const {sendBtn, profileDiv, imageSendBtn} = require('./variables');
 const fs = require('fs');
-const { send } = require('process');
+const waitFor = require('./utils/waitFor')
 
 const start = async () => {
+  
+  async function pasteAndSend(page) {
+    // await page.focus(sendBtn)
+    await page.keyboard.down('ControlLeft');
+    await page.keyboard.press('KeyV');
+    await page.keyboard.up('ControlLeft');
+
+    // hold
+    await page.waitForSelector(imageSendBtn, {timeout: 60 * 1000})
+    
+    await page.keyboard.press(String.fromCharCode(13));
+    await waitFor(10);
+  }
+
   const browser = await puppeteer.launch({
     headless: false,
     userDataDir: './user_data'
@@ -14,8 +28,7 @@ const start = async () => {
   const userAgent = 'Mozilla/5.0 (X11; Linux x86_64)' +
   'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.39 Safari/537.36';
   await page.setUserAgent(userAgent);
-  await page.goto('http://web.whatsapp.com')
-
+  await page.goto('http://web.whatsapp.com');
 
   await page.waitForSelector(profileDiv, {timeout: 60 * 1000})
   
@@ -32,18 +45,22 @@ const start = async () => {
       await dialog.accept()
     }) 
     try {
-      await page.waitForSelector(sendBtn, {timeout: 30 * 1000})
+      await page.waitForSelector(sendBtn, {timeout: 30 * 1000});
+      await page.keyboard.press(String.fromCharCode(13));
     } catch (error) {
       console.log(error)
       // console.log('invalid phone number ' +contact+' in line-'+eval(i+1))
       return;
     }
-    await page.focus(sendBtn)
-    await page.keyboard.press(String.fromCharCode(13))
-    console.log('success send message to '+contact)
+    
+    if(sendImage === 'yes') {
+      await pasteAndSend(page);
+    }
+
+    console.log('success send message to '+contact);
   }
 
-  console.log('done')
+  console.log('done');
   await page.waitFor(1000)
   browser.close()
 }
